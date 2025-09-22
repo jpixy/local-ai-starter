@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  local-ai:
+    build: .
+    ports:
+      - "8000:8000"    # API server port
+      - "11434:11434"  # Ollama service port
+    environment:
+      - OLLAMA_HOST=localhost
+      - OLLAMA_PORT=11434
+      - OLLAMA_MODEL=qwen:7b
+      - OLLAMA_TIMEOUT=60
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  ollama_data:
