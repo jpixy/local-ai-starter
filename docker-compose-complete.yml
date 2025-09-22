@@ -1,0 +1,92 @@
+# 完整的 Ollama + Qwen 72B + Nginx 反向代理 Docker Compose 配置
+# 一键启动完整的AI服务栈
+
+services:
+  # Ollama 服务 - 使用官方镜像，支持GPU加速
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-service
+    ports:
+      - "11434:11434"  # Ollama API端口（内部使用）
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_PORT=11434
+      # 性能优化配置
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_FLASH_ATTENTION=1
+      - OLLAMA_NUM_PARALLEL=1
+    volumes:
+      # 挂载host上已有的模型目录（避免重复下载63GB模型）
+      - /usr/share/ollama/.ollama:/root/.ollama
+      # 挂载脚本目录
+      - ./scripts:/scripts
+    restart: unless-stopped
+    shm_size: '8gb'  # 增加共享内存支持大模型
+    # GPU支持配置
+    deploy:
+      resources:
+        limits:
+          memory: 80G  # 为72B模型预留充足内存
+        reservations:
+          memory: 40G
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    # 使用host上已有的模型，无需下载
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      echo '🚀 启动 Ollama 服务（使用host上已有模型）...'
+      ollama serve &
+      
+      echo '⏳ 等待 Ollama 服务启动...'
+      sleep 10
+      
+      echo '📋 检查可用模型...'
+      ollama list
+      
+      echo '✅ 服务就绪！使用host上的模型数据 (63GB)'
+      wait
+      "
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s   # 模型已存在，快速启动
+
+  # Nginx 反向代理服务
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    ports:
+      - "80:80"   # HTTP端口
+      - "443:443" # HTTPS端口（预留）
+    volumes:
+      - ./nginx/ollama-docker.conf:/etc/nginx/conf.d/default.conf:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - SERVER_IP=10.176.202.207  # 可以通过环境变量传入
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  # ollama_data: # 不再需要，直接挂载host目录
+  #   driver: local
+  nginx_logs:
+    driver: local
+
+# 网络配置
+networks:
+  default:
+    name: ollama-network
+    driver: bridge

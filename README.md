@@ -266,6 +266,11 @@ Tests include:
 
 - [中文文档](docs/zh/README.md) - Chinese documentation
 - **[快速部署指南](docs/zh/quick-start.md)** - Quick deployment and testing guide
+- **[Docker Compose完整指南](docs/zh/docker-compose-complete-guide.md)** - 一键部署Ollama+Nginx完整服务栈
+- **[性能优化指南](docs/zh/performance-optimization.md)** - 解决大模型推理性能问题
+- **[Host完整部署指南](docs/zh/host-deployment-complete.md)** - 从裸机到Host服务运行的完整过程
+- **[裸机完整部署指南](docs/zh/bare-metal-deployment.md)** - Complete bare-metal deployment guide
+- **[快速安装命令参考](docs/zh/quick-setup-commands.md)** - Quick setup commands reference
 - [安装指南](docs/zh/installation.md) - Installation guide
 - [第三方集成指南](docs/zh/third-party-integration.md) - Third-party integration guide
 
