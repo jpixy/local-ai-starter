@@ -51,13 +51,16 @@ fi
 
 echo ""
 
-# 检查是否有72B模型
-if echo "$MODELS_RESPONSE" | jq -r '.models[].name' | grep -q "qwen2.5:72b"; then
-    echo "✅ Qwen 2.5 72B 模型已加载"
-    TEST_MODEL="qwen2.5:72b"
+# 检查可用模型，优先使用7B
+if echo "$MODELS_RESPONSE" | jq -r '.models[].name' | grep -q "qwen2.5:7b"; then
+    echo "✅ Qwen 2.5 7B 模型已加载"
+    TEST_MODEL="qwen2.5:7b"
 elif echo "$MODELS_RESPONSE" | jq -r '.models[].name' | grep -q "qwen2.5:32b"; then
     echo "✅ Qwen 2.5 32B 模型已加载"
     TEST_MODEL="qwen2.5:32b"
+elif echo "$MODELS_RESPONSE" | jq -r '.models[].name' | grep -q "qwen2.5:72b"; then
+    echo "✅ Qwen 2.5 72B 模型已加载"
+    TEST_MODEL="qwen2.5:72b"
 else
     echo "❌ 未找到 Qwen 模型"
     exit 1

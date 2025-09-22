@@ -21,14 +21,14 @@ services:
       # 挂载脚本目录
       - ./scripts:/scripts
     restart: unless-stopped
-    shm_size: '8gb'  # 增加共享内存支持大模型
+    shm_size: '4gb'  # 7B模型需要的共享内存更少
     # GPU支持配置
     deploy:
       resources:
         limits:
-          memory: 80G  # 为72B模型预留充足内存
+          memory: 16G  # 7B模型内存需求大幅降低
         reservations:
-          memory: 40G
+          memory: 8G
           devices:
             - driver: nvidia
               count: all
@@ -43,10 +43,18 @@ services:
       echo '⏳ 等待 Ollama 服务启动...'
       sleep 10
       
+      echo '📥 确保7B模型可用...'
+      if ! ollama list | grep -q 'qwen2.5:7b'; then
+        echo '正在下载 qwen2.5:7b 模型...'
+        ollama pull qwen2.5:7b
+      else
+        echo '✅ qwen2.5:7b 模型已存在'
+      fi
+      
       echo '📋 检查可用模型...'
       ollama list
       
-      echo '✅ 服务就绪！使用host上的模型数据 (63GB)'
+      echo '✅ 服务就绪！主要使用7B模型以获得更快响应速度'
       wait
       "
     healthcheck:
