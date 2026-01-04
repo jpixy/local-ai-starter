@@ -1,6 +1,6 @@
 # Local AI Starter
 
-本地 AI 服务启动器，用于安装和管理 Ollama + Qwen 2.5 7B 模型。
+本地 AI 服务启动器，用于安装和管理 Ollama + Qwen 2.5 模型。
 
 ## 功能
 
@@ -10,18 +10,29 @@
 
 ## 快速开始
 
+### 方式一：直接安装
+
 ```bash
-# 安装
-make install
+# 安装 Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
 
-# 启动
-make start
+# 启动服务
+ollama serve &
 
-# 检查状态
-make status
+# 下载模型
+ollama pull qwen2.5:7b
 
-# 测试
-make test
+# 验证
+curl http://localhost:11434/api/tags | jq
+```
+
+### 方式二：使用 Makefile
+
+```bash
+make install   # 安装 Ollama + 下载模型
+make start     # 启动服务
+make status    # 检查状态
+make test      # 测试 API
 ```
 
 ## API 使用
@@ -46,10 +57,19 @@ curl http://localhost:11434/api/chat -d '{
 }'
 ```
 
+## 模型选择
+
+| 模型 | 大小 | 适用场景 |
+|------|------|---------|
+| **qwen2.5:7b** | 4.7 GB | 推荐，media_organizer 默认使用 |
+| qwen2.5:32b | 19 GB | 复杂推理 |
+| qwen2.5:72b | 47 GB | 最高质量 |
+
 ## 文档
 
-- [安装指南](installation.md)
 - [快速部署](quick-start.md)
+- [安装指南](installation.md)
+- [Docker 部署](docker-compose-complete-guide.md)
 
 ## API 文档
 

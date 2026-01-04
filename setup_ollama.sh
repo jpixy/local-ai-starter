@@ -1,83 +1,96 @@
 #!/bin/bash
 
 # Ollama installation and configuration script
-echo "=== Starting Ollama Installation ==="
+# Downloads only qwen2.5:7b by default (recommended for media_organizer)
+
+set -e
+
+echo "=== Ollama Installation Script ==="
+echo ""
 
 # Check if Ollama is already installed
 if command -v ollama &> /dev/null; then
-    echo "Ollama is already installed, version: $(ollama --version)"
+    echo "✓ Ollama is already installed"
+    ollama --version 2>/dev/null || echo "  (version unknown)"
 else
     echo "Installing Ollama..."
-    # Use official installation script
     curl -fsSL https://ollama.ai/install.sh | sh
     
-    # Check if installation was successful
     if command -v ollama &> /dev/null; then
-        echo "SUCCESS Ollama installation completed!"
+        echo "✓ Ollama installation completed!"
     else
-        echo "ERROR Ollama installation failed, please check network connection or install manually"
+        echo "✗ Ollama installation failed"
+        echo "  Please check network connection or install manually"
         exit 1
     fi
 fi
 
+echo ""
 echo "=== Starting Ollama Service ==="
-# Start Ollama service in background
+
+# Stop any existing ollama process
+pkill ollama 2>/dev/null || true
+sleep 1
+
+# Start Ollama service
 ollama serve &
-sleep 5
+OLLAMA_PID=$!
+sleep 3
 
-echo "=== Configuring Ollama for External Access ==="
-# Configure Ollama for external access
-sudo mkdir -p /etc/systemd/system/ollama.service.d
-sudo tee /etc/systemd/system/ollama.service.d/environment.conf << EOF
-[Service]
-Environment="OLLAMA_HOST=0.0.0.0"
-Environment="OLLAMA_PORT=11434"
-EOF
+# Check if started
+if ! pgrep -x "ollama" > /dev/null; then
+    echo "✗ Failed to start Ollama"
+    exit 1
+fi
+echo "✓ Ollama started (PID: $OLLAMA_PID)"
 
-# Reload systemd and restart ollama
-sudo systemctl daemon-reload
-sudo systemctl restart ollama
+echo ""
+echo "=== Downloading Qwen 2.5 7B Model (4.7 GB) ==="
+echo "This is the recommended model for media_organizer"
+echo ""
 
-echo "=== Downloading Qwen Models ==="
-# Download qwen2.5 models
-echo "Downloading Qwen 2.5 32B model (this may take 30+ minutes)..."
-ollama pull qwen2.5:32b
+ollama pull qwen2.5:7b
 
-echo "Downloading Qwen 2.5 72B model (this may take 60+ minutes)..."
-ollama pull qwen2.5:72b
-
-# Verify model download success
-if ollama list | grep -q "qwen2.5:32b"; then
-    echo "SUCCESS Qwen 2.5 32B model downloaded successfully!"
+if ollama list | grep -q "qwen2.5:7b"; then
+    echo ""
+    echo "✓ qwen2.5:7b model downloaded successfully!"
 else
-    echo "ERROR Qwen 2.5 32B model download failed"
+    echo "✗ qwen2.5:7b model download failed"
     exit 1
 fi
 
-if ollama list | grep -q "qwen2.5:72b"; then
-    echo "SUCCESS Qwen 2.5 72B model downloaded successfully!"
+echo ""
+echo "=== Testing Model ==="
+response=$(curl -s http://localhost:11434/api/generate \
+    -d '{"model": "qwen2.5:7b", "prompt": "Say hi", "stream": false}' \
+    | grep -o '"response":"[^"]*"' | head -1)
+
+if [ -n "$response" ]; then
+    echo "✓ Model test passed"
 else
-    echo "WARNING Qwen 2.5 72B model download may have failed"
+    echo "⚠ Model test returned empty response"
 fi
 
-echo "=== Testing Model Execution ==="
-# Simple model test
-echo "Testing 32B model response..."
-echo "Hello" | ollama run qwen2.5:32b
+echo ""
+echo "=== Installation Complete ==="
+echo ""
+echo "Installed models:"
+ollama list
+echo ""
 
-echo "=== Ollama and Qwen Models Setup Complete! ==="
-SERVER_IP=$(hostname -I | awk '{print $1}')
+SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
+
 echo "API service running at:"
-echo "  - Local: http://localhost:11434"
+echo "  - Local:    http://localhost:11434"
 echo "  - External: http://$SERVER_IP:11434"
-echo
-echo "You can interact with the models using:"
-echo "  ollama run qwen2.5:32b"
-echo "  ollama run qwen2.5:72b"
-echo
-echo "Or call via API endpoint:"
-echo "  curl http://$SERVER_IP:11434/api/generate -X POST -H 'Content-Type: application/json' -d '{\"model\": \"qwen2.5:32b\", \"prompt\": \"Hello\", \"stream\": false}'"
-echo
+echo ""
+echo "Quick test:"
+echo "  curl http://localhost:11434/api/generate -d '{\"model\": \"qwen2.5:7b\", \"prompt\": \"Hello\", \"stream\": false}'"
+echo ""
+echo "Optional: Download larger models for better quality:"
+echo "  ollama pull qwen2.5:32b  # 19 GB"
+echo "  ollama pull qwen2.5:72b  # 47 GB"
+echo ""
 echo "Next steps:"
-echo "  - Use ./start-complete.sh for Docker Compose deployment"
-echo "  - Use ./test-complete.sh for comprehensive testing"
+echo "  - Use 'make status' to check service"
+echo "  - Use 'make test' to test API"

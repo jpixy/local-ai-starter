@@ -1,108 +1,158 @@
 # 快速开始指南
 
-## 当前系统状态 ✅
+## 选择部署方式
 
-您的系统已经通过 Docker Compose 成功部署并运行！
+| 方式 | 适用场景 | 启动时间 |
+|------|---------|---------|
+| **Host 部署** (推荐) | 开发环境、快速测试 | 5-10 分钟 |
+| **Docker 部署** | 生产环境、多服务编排 | 10-15 分钟 |
 
-### 运行中的服务
+---
 
-- **Ollama 服务**: `ollama-service` (运行中，健康)
-- **Nginx 代理**: `nginx-proxy` (运行中，健康)
-- **运行时长**: 12 天
-- **访问端口**: 11434 (Ollama), 80/443 (Nginx)
+## 方式一：Host 部署（推荐）
 
-### 已安装的模型
-
-1. **qwen2.5:7b** - 4.7 GB (推荐日常使用)
-2. **qwen2.5:32b** - 19 GB (平衡性能)
-3. **qwen2.5:72b** - 47 GB (最佳质量)
-
-## 一分钟快速测试
-
-### 1. 检查服务状态
+### 1. 安装 Ollama
 
 ```bash
-docker compose -f docker-compose-complete.yml ps
+# 一键安装
+curl -fsSL https://ollama.ai/install.sh | sh
 ```
 
-### 2. 测试 API（使用 7B 模型，最快）
+### 2. 启动服务
+
+```bash
+# 后台启动（推荐）
+ollama serve &
+
+# 或使用 systemd（需要配置外部访问）
+sudo systemctl start ollama
+```
+
+### 3. 下载模型
+
+```bash
+# qwen2.5:7b (4.7 GB) - 推荐，适合大多数场景
+ollama pull qwen2.5:7b
+
+# 验证
+ollama list
+```
+
+### 4. 测试
 
 ```bash
 curl http://localhost:11434/api/generate -X POST \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "qwen2.5:7b",
-    "prompt": "用一句话介绍你自己",
+    "prompt": "你好",
     "stream": false
-  }' | python3 -m json.tool
+  }' | jq '.response'
 ```
-
-### 3. 测试 Python 客户端
-
-```bash
-# 安装依赖（如果还没安装）
-poetry install
-
-# 运行测试
-poetry run python test_client.py
-```
-
-## 常用命令
-
-```bash
-# 查看日志
-docker compose -f docker-compose-complete.yml logs -f ollama
-
-# 查看模型列表
-docker exec ollama-service ollama list
-
-# 进入容器
-docker exec -it ollama-service bash
-
-# 重启服务
-docker compose -f docker-compose-complete.yml restart
-
-# 停止服务
-docker compose -f docker-compose-complete.yml down
-
-# 启动服务
-docker compose -f docker-compose-complete.yml up -d
-```
-
-## 选择模型
-
-根据您的需求选择合适的模型：
-
-| 模型 | 响应速度 | 质量 | 内存需求 | 适用场景 |
-|------|---------|------|---------|---------|
-| 7B | ⚡⚡⚡ 快 | ⭐⭐⭐ 好 | 8GB | 日常对话、快速原型 |
-| 32B | ⚡⚡ 中等 | ⭐⭐⭐⭐ 很好 | 16-32GB | 专业应用、复杂推理 |
-| 72B | ⚡ 较慢 | ⭐⭐⭐⭐⭐ 优秀 | 32-64GB | 高质量内容创作 |
-
-## Python 使用示例
-
-```python
-from ollama_client import create_client
-
-# 创建客户端
-client = create_client()
-
-# 快速测试
-if client.health_check():
-    response = client.generate("什么是人工智能？")
-    print(response['response'])
-```
-
-## 访问地址
-
-- **本地访问**: http://localhost:11434
-- **外部访问**: http://10.176.202.207:11434
-- **Nginx 代理**: http://10.176.202.207 (端口 80)
-
-## 更多信息
-
-查看完整文档：[README.md](README.md)
 
 ---
 
-**提示**: 如果遇到问题，请查看 README.md 中的"故障排查"部分。
+## 方式二：Docker 部署
+
+```bash
+cd local-ai-starter
+
+# 启动服务栈（Ollama + Nginx）
+docker compose -f docker-compose-complete.yml up -d
+
+# 查看状态
+docker compose -f docker-compose-complete.yml ps
+
+# 查看日志
+docker compose -f docker-compose-complete.yml logs -f ollama
+```
+
+---
+
+## 常用命令
+
+### Host 部署
+
+```bash
+# 启动
+ollama serve &
+
+# 停止
+pkill ollama
+
+# 状态
+curl http://localhost:11434/api/tags | jq
+
+# 模型列表
+ollama list
+```
+
+### Docker 部署
+
+```bash
+# 启动
+docker compose -f docker-compose-complete.yml up -d
+
+# 停止
+docker compose -f docker-compose-complete.yml down
+
+# 状态
+docker compose -f docker-compose-complete.yml ps
+
+# 进入容器
+docker exec -it ollama-service bash
+```
+
+---
+
+## 使用 Makefile（Host 部署）
+
+```bash
+make install   # 安装 Ollama + 下载 7B 模型
+make start     # 启动服务
+make stop      # 停止服务
+make status    # 检查状态
+make test      # 测试 API
+make models    # 列出模型
+```
+
+---
+
+## 模型选择
+
+| 模型 | 大小 | 内存需求 | 响应速度 | 适用场景 |
+|------|------|---------|---------|---------|
+| **qwen2.5:7b** | 4.7 GB | 8 GB | ⚡ 快 | 日常使用、media_organizer |
+| qwen2.5:32b | 19 GB | 32 GB | 中等 | 复杂推理 |
+| qwen2.5:72b | 47 GB | 64 GB | 慢 | 最高质量 |
+
+**media_organizer 默认使用 `qwen2.5:7b`**
+
+---
+
+## 访问地址
+
+- **本地**: http://localhost:11434
+- **外部**: http://<server-ip>:11434
+
+---
+
+## 故障排查
+
+```bash
+# Ollama 未运行
+ollama serve &
+
+# 模型未下载
+ollama pull qwen2.5:7b
+
+# 端口被占用
+lsof -i :11434
+```
+
+---
+
+## 更多信息
+
+- [README.md](README.md) - 完整文档
+- [API 参考](docs/api-reference.md) - Ollama API 文档

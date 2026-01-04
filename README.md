@@ -1,12 +1,6 @@
 # Local AI Starter
 
-本地 AI 服务启动器，用于安装和管理 Ollama + Qwen 2.5 7B 模型。
-
-## 功能
-
-- 一键安装 Ollama
-- 自动下载 Qwen 2.5 7B 模型
-- 提供 Ollama 原生 REST API
+本地 AI 服务启动器，用于安装和管理 Ollama + Qwen 2.5 模型。
 
 ## 系统要求
 
@@ -14,83 +8,101 @@
 - 8GB+ RAM（推荐 16GB+）
 - 10GB+ 可用磁盘空间
 - curl
+- GPU 可选（NVIDIA + CUDA 显著提升速度）
 
 ## 快速开始
 
-### 安装
+### 方式一：Host 部署（推荐）
 
 ```bash
-# 克隆项目
-git clone <your-repo-url>
-cd local-ai-starter
+# 1. 安装 Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
 
-# 安装 Ollama 并下载模型
-make install
-# 或
-./setup_ollama.sh
+# 2. 启动服务
+ollama serve &
+
+# 3. 下载 7B 模型（推荐，4.7 GB）
+ollama pull qwen2.5:7b
+
+# 4. 验证
+ollama list
+curl http://localhost:11434/api/tags | jq
 ```
 
-### 启动服务
+### 方式二：Docker 部署
 
 ```bash
-make start
+# 启动完整服务栈（Ollama + Nginx）
+docker compose -f docker-compose-complete.yml up -d
+
+# 查看状态
+docker compose -f docker-compose-complete.yml ps
 ```
 
-### 检查状态
+## 使用 Makefile
 
 ```bash
-make status
+make install   # 安装 Ollama + 下载模型
+make start     # 启动服务
+make stop      # 停止服务
+make status    # 检查状态
+make test      # 测试 API
+make models    # 列出模型
+make clean     # 清理数据
 ```
 
-### 测试 API
+## 测试 API
 
 ```bash
-make test
-```
-
-## API 使用
-
-Ollama 提供 REST API，默认运行在 `http://localhost:11434`。
-
-### 文本生成
-
-```bash
+# 文本生成
 curl http://localhost:11434/api/generate -d '{
   "model": "qwen2.5:7b",
   "prompt": "什么是人工智能？",
   "stream": false
 }'
-```
 
-### 聊天对话
-
-```bash
+# 聊天对话
 curl http://localhost:11434/api/chat -d '{
   "model": "qwen2.5:7b",
-  "messages": [
-    {"role": "user", "content": "你好"}
-  ],
+  "messages": [{"role": "user", "content": "你好"}],
   "stream": false
 }'
-```
 
-### 列出模型
-
-```bash
+# 模型列表
 curl http://localhost:11434/api/tags
 ```
 
-## 命令参考
+## 配置外部访问
 
-| 命令 | 描述 |
-|------|------|
-| `make install` | 安装 Ollama 并下载模型 |
-| `make start` | 启动 Ollama 服务 |
-| `make stop` | 停止 Ollama 服务 |
-| `make status` | 检查服务状态 |
-| `make test` | 测试 API |
-| `make models` | 列出已安装模型 |
-| `make clean` | 清理所有数据 |
+Ollama 默认只监听 localhost。配置外部访问：
+
+```bash
+# 方式一：临时（命令行）
+OLLAMA_HOST=0.0.0.0 ollama serve
+
+# 方式二：永久（systemd）
+sudo mkdir -p /etc/systemd/system/ollama.service.d
+sudo tee /etc/systemd/system/ollama.service.d/environment.conf << EOF
+[Service]
+Environment="OLLAMA_HOST=0.0.0.0"
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart ollama
+```
+
+## 模型选择
+
+| 模型 | 大小 | 内存需求 | 适用场景 |
+|------|------|---------|---------|
+| **qwen2.5:7b** | 4.7 GB | 8 GB | 日常使用、media_organizer（推荐） |
+| qwen2.5:32b | 19 GB | 32 GB | 复杂推理任务 |
+| qwen2.5:72b | 47 GB | 64 GB | 最高质量输出 |
+
+```bash
+# 下载其他模型
+ollama pull qwen2.5:32b
+ollama pull qwen2.5:72b
+```
 
 ## API 端点
 
@@ -102,9 +114,25 @@ curl http://localhost:11434/api/tags
 | `/api/show` | POST | 模型详情 |
 | `/api/pull` | POST | 下载模型 |
 
+## 项目文件
+
+```
+local-ai-starter/
+├── QUICKSTART.md              # 快速开始指南
+├── README.md                  # 本文档
+├── Makefile                   # 常用命令
+├── setup_ollama.sh            # 安装脚本
+├── docker-compose-complete.yml # Docker 部署配置
+├── start-complete.sh          # Docker 启动脚本
+├── test-complete.sh           # 测试脚本
+├── nginx/                     # Nginx 配置
+└── docs/                      # 详细文档
+```
+
 ## 文档
 
-- [API 参考](docs/api-reference.md) - 完整的 Ollama API 端点文档
+- [快速开始](QUICKSTART.md)
+- [API 参考](docs/api-reference.md)
 - [中文文档](docs/zh/README.md)
 
 官方 API 文档：https://github.com/ollama/ollama/blob/main/docs/api.md
